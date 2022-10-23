@@ -111,4 +111,4 @@ def convert_text_into_good_sentences(text):
 
 
 # let's begin
-generate_summary( "outputTxt.txt", 10)
+# generate_summary( "outputTxt.txt", 10)

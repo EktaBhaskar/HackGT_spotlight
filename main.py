@@ -15,7 +15,7 @@ def home():
     print("home")
     return "home"
 
-@app.route('/upload/', methods=['GET', 'POST'])
+@app.route('/upload/', methods=['POST'])
 def upload_function():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -58,7 +58,7 @@ def upload_function():
 if __name__=="__main__":
     # file.save(os.path.join(app.config['VIDEO_DIR'],
     #                   filename))
-    audio_name = video_to_audio('videoplayback.mp4')
-    # text_file = audio_to_text(audio_name)
-    generate_summary(text_file, 2)
-	# app.run(host='0.0.0.0', port = 81)
+    # audio_name = video_to_audio('videoplayback.mp4')
+    # # text_file = audio_to_text(audio_name)
+    # generate_summary(text_file, 2)
+	app.run(host='0.0.0.0', port = 81)

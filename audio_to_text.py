@@ -128,4 +128,4 @@ def audio_to_text(filename):
     text = obj.get_text()
     obj.write_to_text_file(text, file_name)
 
-audio_to_text('./audio/videoplayback.wav')
+# audio_to_text('./audio/videoplayback.wav')

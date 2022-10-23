@@ -15,5 +15,5 @@ def video_to_audio(file_name):
         f'ffmpeg -i {video_path} -ar 16000 -ac 1 {audio_path}.wav -y')
     return video_name + '.wav'
 
-print(video_to_audio('videoplayback.mp4'))
+# print(video_to_audio('videoplayback.mp4'))
 # print("test")
