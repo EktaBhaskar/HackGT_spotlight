@@ -39,20 +39,20 @@ def upload_function():
                       filename))
                 audio_name = video_to_audio(filename)
                 text_file = audio_to_text(audio_name)
-                summary = generate_summary(text_file, 5)
+                summary = generate_summary(text_file, 8)
             elif filename.endswith('.wav'):
                 file.save(os.path.join(".",
                       filename))
                 text_file = audio_to_text(filename)
                 print("test:", text_file)
-                summary = generate_summary(text_file, 5)
+                summary = generate_summary(text_file, 8)
             else:
                 file.save(os.path.join("./text",
                       filename))
-                summary = generate_summary(filename, 5)
+                summary = generate_summary(filename, 2)
             # return send_from_directory(directory='pdf', filename=summary)
             print(summary)
-            return summary
+            return "This is the Summary: "+ summary
     return render_template('home.html')
 
 
