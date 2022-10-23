@@ -41,7 +41,7 @@ def upload_function():
             elif filename.endswith('.wav'):
                 file.save(os.path.join(app.config['AUDIO_DIR'],
                       filename))
-                text_file = audio_to_text(audio_name)
+                text_file = audio_to_text(filename)
                 summary = generate_summary(text_file, 2)
             else:
                 file.save(os.path.join(app.config['TEXT_DIR'],
@@ -59,6 +59,6 @@ if __name__=="__main__":
     # file.save(os.path.join(app.config['VIDEO_DIR'],
     #                   filename))
     audio_name = video_to_audio('videoplayback.mp4')
-    text_file = audio_to_text(audio_name)
+    # text_file = audio_to_text(audio_name)
     generate_summary(text_file, 2)
 	# app.run(host='0.0.0.0', port = 81)

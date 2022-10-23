@@ -5,27 +5,24 @@ from nltk.corpus import stopwords
 from nltk.cluster.util import cosine_distance
 import numpy as np
 import networkx as nx
+import math
 import re
-from constants import TEXT_DIR
-
-# def apostrophe_normalisation(data):        
-#     for (i, j) in [(r"n\'t", " not"), (r"\'re", " are"), (r"\'s", " is"), (r"\'d", " would"), (r"\'ll", " will"), (r"\'t", " not"), (r"\'ve", " have"), (r"\'m", " am"), (r"\'Cause", "because")]:
-#         data = re.sub(i, j, data)
-#     return data
  
+def apostrophe_normalisation(data):        
+    for (i, j) in [(r"n\'t", " not"), (r"\'re", " are"), (r"\'s", " is"), (r"\'d", " would"), (r"\'ll", " will"), (r"\'t", " not"), (r"\'ve", " have"), (r"\'m", " am"), (r"\'Cause", "because")]:
+        data = re.sub(i, j, data)
+    return data
+
 def read_article(file_name):
-    file_x = f'{TEXT_DIR}/{file_name}'
-    file = open(file_x, "r")
+    file = open(file_name, "r")
     filedata = file.readlines()
-    # article = convert_text_into_good_sentences(filedata[0])
+    article = convert_text_into_good_sentences(filedata[0])
+    article = filedata[0].split(". ")
     sentences = []
 
-    for sentence in filedata[0].split(" "):
-        # sentence = apostrophe_normalisation(sentence)
+    for sentence in article:
+        sentence = apostrophe_normalisation(sentence)
         print(sentence)
-        # sentence = sentence.replace('\n','')
-        # sentence = sentence.replace('\t','')
-        # sentence similarity
         sentences.append(sentence.replace("[^a-zA-Z]", " ").split(" "))
     sentences.pop() 
     
@@ -54,8 +51,11 @@ def sentence_similarity(sent1, sent2, stopwords=None):
         if w in stopwords:
             continue
         vector2[all_words.index(w)] += 1
- 
-    return 1 - cosine_distance(vector1, vector2)
+    if(math.isnan(cosine_distance(vector1, vector2))):
+        # print("null")
+        return 0
+    else:
+        return 1 - cosine_distance(vector1, vector2)
  
 def build_similarity_matrix(sentences, stop_words):
     # Create an empty similarity matrix
@@ -83,16 +83,14 @@ def generate_summary(file_name, top_n=5):
 
     # Step 3 - Rank sentences in similarity martix
     sentence_similarity_graph = nx.from_numpy_array(sentence_similarity_martix)
-    scores = nx.pagerank(sentence_similarity_graph)
+    scores = nx.pagerank(sentence_similarity_graph, max_iter = int(1e6), tol = 1.0e-08)
 
     # Step 4 - Sort the rank and pick top sentences
     ranked_sentence = sorted(((scores[i],s) for i,s in enumerate(sentences)), reverse=True)    
-    # print("Indexes of top ranked_sentence order are ", ranked_sentence)    
+    print("Indexes of top ranked_sentence order are ", ranked_sentence)    
 
-    print("test1:", ranked_sentence)
     for i in range(top_n):
       summarize_text.append(" ".join(ranked_sentence[i][1]))
-    #   print("test", ranked_sentence[i][0])
 
     # Step 5 - Offcourse, output the summarize text
     print("Summarize Text: \n", ". ".join(summarize_text))
@@ -111,4 +109,6 @@ def convert_text_into_good_sentences(text):
     text = " ".join(good_sent)
     return text
 
-generate_summary( "calculus_test.txt", 2)
+
+# let's begin
+generate_summary( "outputTxt.txt", 10)
