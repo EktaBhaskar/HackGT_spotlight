@@ -14,6 +14,7 @@ def apostrophe_normalisation(data):
     return data
 
 def read_article(file_name):
+    print(file_name)
     file = open(file_name, "r")
     filedata = file.readlines()
     article = convert_text_into_good_sentences(filedata[0])
@@ -74,6 +75,7 @@ def generate_summary(file_name, top_n=5):
     nltk.download("stopwords")
     stop_words = stopwords.words('english')
     summarize_text = []
+    print("filename:", file_name)
 
     # Step 1 - Read text anc split it
     sentences =  read_article(file_name)
@@ -93,7 +95,7 @@ def generate_summary(file_name, top_n=5):
       summarize_text.append(" ".join(ranked_sentence[i][1]))
 
     # Step 5 - Offcourse, output the summarize text
-    print("Summarize Text: \n", ". ".join(summarize_text))
+    return ". ".join(summarize_text)
 
 def convert_text_into_good_sentences(text):
     text = text.replace("if I", ". if I")
