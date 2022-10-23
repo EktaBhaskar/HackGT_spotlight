@@ -1,254 +1,131 @@
+#!/usr/bin/env python3
+
+import argparse
 import os
-import wave
+import os.path
+import pathlib
+import speech_recognition as sr
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
 
-from multiprocessing import Pool
-from google.cloud import storage
-from google.cloud import speech
 
-from constants import BUCKET, AUDIO_DIR, TEXT_DIR
+class AudioToText:
+    """ Converts an audio file to text. """
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = './credentials.json'
+    def __init__(self, fileInput, fileOutput, language):
+        """ Initialize. """
+        self.input = fileInput
+        self.output = fileOutput
+        self.language = language
+        self.minSilenceLen = 500                # The minimum length for silent sections in milliseconds.
+        self.silenceThresh = 14                 # The upper bound for how quiet silent in dBFS.
+        self.keepSilence = 500                  # How much silence to keep in ms or a bool.
 
-speech_client = speech.SpeechClient()
-storage_client = storage.Client()
+        self.__check_files_valid()
 
+        # Create a speech recognition object
+        self.rec = sr.Recognizer()
 
-# def upload_blob(local_file_path, file_name):
-#     """ Upload file """
-#     bucket = storage_client.get_bucket(BUCKET)
-#     blob = bucket.blob(file_name)
-#     blob.upload_from_filename(local_file_path)
 
+    def get_text(self):
+        """ Returns the text recognized from the input file. """
+        self.__check_files_valid()
 
-# def delete_blob(file_name):
-#     """ Deletes a blob from the bucket. """
-#     bucket = storage_client.get_bucket(BUCKET)
-#     blob = bucket.blob(file_name)
-#     blob.delete()
+        # Open audio file
+        sound = AudioSegment.from_file(self.input, format=pathlib.Path(self.input).suffix.replace(".", ""))
 
+        print(f"Running script on file: {self.input}")
+        print(f"Length of audio file:     {int(len(sound) / 1000.0)} seconds.")
 
-# def framerate_and_channels(local_file_path):
-#     """ Get the frame rate and number of channels """
-#     with wave.open(local_file_path, "rb") as wave_file:
-#         framerate = wave_file.getframerate()
-#         channels = wave_file.getnchannels()
-#         return framerate, channels
+        # Split audio into chunks
+        silenceThresh = sound.dBFS - self.silenceThresh
+        print("Splitting file into chunks...")
+        chunks = split_on_silence(  sound,
+                                    min_silence_len=self.minSilenceLen,
+                                    silence_thresh=silenceThresh,
+                                    keep_silence=self.keepSilence)
 
+        fullText = ""
+        print("Translating chunks into text...")
+        for i in range(len(chunks)):
+            chunk = chunks[i]
+            obj = chunk.export(format="wav")
 
-# def transcribe(local_file_path, file_name):
-#     framerate, channels = framerate_and_channels(local_file_path)
+            with sr.AudioFile(obj) as source:
+                audioListened = self.rec.record(source)
 
-#     if channels > 1:
-#         raise Exception("Too many channels")
+                try:
+                    text = self.rec.recognize_google(audioListened, language=self.language)
+                except sr.UnknownValueError as e:
+                    pass
 
-#     gcs_uri = f'gs://{BUCKET}/{file_name}'
+                else:
+                    text = f"{text.capitalize()}. "
+                    fullText += text
 
-#     audio = speech.RecognitionAudio(uri=gcs_uri)
+        return fullText
 
-#     config = speech.RecognitionConfig(
-#         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-#         sample_rate_hertz=framerate,
-#         language_code='en-US',
-#         model='video'
-#     )
 
-#     operation = speech_client.long_running_recognize(
-#         {"config": config, "audio": audio})
-#     response = operation.result()
+    def write_to_text_file(self, text, file_name):
+        """ Write a text to a file. """
+        save_path = './text/'
+        name_of_file = file_name.split(".")[0]
+        # print(name_of_file)
+        completeName = os.path.join(save_path, name_of_file+".txt")         
 
-#     sentences = [
-#         result.alternatives[0].transcript.lstrip() for result in response.results]
+        file1 = open(completeName, "w")
 
-#     return sentences
+        # toFile = raw_input("Write what you want into the field")
 
+        file1.write(text)
+        # print(f"Writing text to file: {self.output}")
+        # with open('./text' + self.output, "w") as f:
+        #     f.write(text)
 
-# def transcribe_wrapper(i, local_file_path, file_name):
-#     print(f'Started Transcribing File #{i}: {file_name}')
 
-#     try:
-#         sentences = transcribe(local_file_path, file_name)
-#         file_name = file_name.split('.')[0]
+    def __check_files_valid(self):
+        """ Check to see if the files are valid. """
+        if not isinstance(self.input, str):
+            raise Exception(f"{self.input} is not of type str.")
+        if not os.path.exists(self.input):
+            raise Exception(f"{self.input} path does not exist.")
 
-#         file = open(f'{TEXT_DIR}/{file_name}.txt', 'w')
-#         file.write(file_name + '\n\n')
+        if not isinstance(self.output, str):
+            raise Exception(f"{self.output} is not of type str.")
+        dirname = os.path.dirname(self.output)
+        if not dirname == "" and not os.path.exists(dirname):
+            raise Exception(f"Some directories may be missing in path: {self.output}.")
 
-#         for sentence in sentences:
-#             file.write(sentence + '\n\n')
 
-#         file.close()
 
-#     except Exception as e:
-#         print(f'FAILED {file_name}')
-#         print(e)
+def audio_to_text(filename):
+    # print("file_name1:" + filename)
+    description = "Converts an audio file to text."
+    parser = argparse.ArgumentParser(prog=os.path.basename(__file__), description=description)
 
-#     print(f'Finished Transcribing File #{i}: {file_name}')
+    # parser.add_argument(dest="input", help="The input audio file.")
+    # parser.add_argument("-i", "--input", help="The input audio file.", required=True)
+    parser.add_argument("-o", "--output", help="The output file for the text. Default 'outputText.txt'")
+    parser.add_argument("-l", "--language", help="See 'https://cloud.google.com/speech-to-text/docs/languages' \
+                                                for all possible language codes, Default is en-GB.")
+    args = parser.parse_args()
 
+    inputFile = filename
+    outputFile = args.output
+    language = args.language
 
-# def merge(output_file_name='output.txt'):
-#     """ Create a single output file using TEXT_DIR """
-#     output = open(output_file_name, 'w')
+    file_name = inputFile.split("/")[-1]
+    # print("input:" + inputFile)
+    # print("file_name2:" + file_name)
 
-#     for file_name in os.listdir(TEXT_DIR):
-#         text_file = open(f'{TEXT_DIR}/{file_name}', 'r')
-#         text = text_file.read()
-#         text_file.close()
+    if outputFile == None:
+        outputFile = file_name.split(".")[0] + '.txt'
 
-#         output.write(text)
+    if language == None:
+        language = "en-GB"
 
-#     output.close()
+    obj = AudioToText(inputFile, outputFile, language)
+    text = obj.get_text()
+    obj.write_to_text_file(text, file_name)
 
-
-# def audio_upload_cloud():
-#     """ Upload audio to GCP """
-#     for i, audio in enumerate(os.listdir(AUDIO_DIR)):
-#         print(f'Uploading File #{i} to GCP: {audio}')
-#         upload_blob(f'{AUDIO_DIR}/{audio}', audio)
-
-
-# def audio_delete_cloud():
-#     """ Delete audio in GCP """
-#     for i, audio in enumerate(os.listdir(AUDIO_DIR)):
-#         print(f'Removing File #{i} from GCP: {audio}')
-#         upload_blob(f'{AUDIO_DIR}/{audio}', audio)
-
-
-# def audio_to_text():
-#     """ Transcribes audio to text """
-#     print('------------ UPLOADING AUDIO TO GCP ------------')
-#     audio_upload_cloud()
-
-#     print('------------ CONVERTING AUDIO TO TEXT ------------')
-#     # Transcription
-#     with Pool(8) as p:
-#         files = [(i+1, f'{AUDIO_DIR}/{audio}', audio)
-#                  for i, audio in enumerate(os.listdir(AUDIO_DIR))]
-
-#         p.starmap(transcribe_wrapper, files)
-
-#     merge()
-
-# textf = audio_to_text()
-# print(textf)
-# # generate_summary(textf, 2)
-
-
-
-
-def upload_blob(local_file_path, file_name):
-    """ Upload file """
-    bucket = storage_client.get_bucket(BUCKET)
-    blob = bucket.blob(file_name)
-    blob.upload_from_filename(local_file_path)
-
-
-def delete_blob(file_name):
-    """ Deletes a blob from the bucket. """
-    bucket = storage_client.get_bucket(BUCKET)
-    blob = bucket.blob(file_name)
-    blob.delete()
-
-
-def framerate_and_channels(local_file_path):
-    """ Get the frame rate and number of channels """
-    with wave.open(local_file_path[0], "rb") as wave_file:
-        framerate = wave_file.getframerate()
-        channels = wave_file.getnchannels()
-        return framerate, channels
-
-
-def transcribe(local_file_path, file_name):
-    framerate, channels = framerate_and_channels(local_file_path)
-
-    if channels > 1:
-        raise Exception("Too many channels")
-
-    gcs_uri = f'gs://{BUCKET}/{file_name}'
-
-    audio = speech.RecognitionAudio(uri=gcs_uri)
-
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=framerate,
-        language_code='en-US',
-        model='video'
-    )
-
-    operation = speech_client.long_running_recognize(
-        {"config": config, "audio": audio})
-    response = operation.result()
-
-    sentences = [
-        result.alternatives[0].transcript.lstrip() for result in response.results]
-
-    return sentences
-
-
-def transcribe_wrapper(local_file_path, file_name):
-    print(f'Started Transcribing File : {file_name}')
-
-    try:
-        sentences = transcribe(local_file_path, file_name)
-        file_name = file_name.split('.')[0]
-
-        file = open(f'{TEXT_DIR}/{file_name}.txt', 'w')
-        # file.write(file_name + '.')
-
-        for sentence in sentences:
-            if sentence == '' and not sentence.isspace():
-                continue
-            else:
-                file.write(sentence + '. ')
-
-        file.close()
-
-    except Exception as e:
-        print(f'FAILED {file_name}')
-        print(e)
-        return
-
-    print(f'Finished Transcribing File #: {file_name}')
-
-
-def merge(output_file_name='output.txt'):
-    """ Create a single output file using TEXT_DIR """
-    output = open(output_file_name, 'w')
-
-    for file_name in os.listdir(TEXT_DIR):
-        text_file = open(f'{TEXT_DIR}/{file_name}', 'r')
-        text = text_file.read()
-        text_file.close()
-
-        output.write(text)
-
-    output.close()
-
-
-def audio_upload_cloud(file_name):
-    """ Upload audio to GCP """
-    print(f'Uploading File # to GCP: {file_name}')
-    upload_blob(f'{AUDIO_DIR}/{file_name}', file_name)
-
-
-def audio_delete_cloud(file_name):
-    """ Delete audio in GCP """
-    print(f'Removing File # from GCP: {file_name}')
-    upload_blob(f'{AUDIO_DIR}/{file_name}', file_name)
-
-
-def audio_to_text(file_name):
-    """ Transcribes audio to text """
-    print('------------ UPLOADING AUDIO TO GCP ------------')
-    audio_upload_cloud(file_name)
-
-    print('------------ CONVERTING AUDIO TO TEXT ------------')
-    # Transcription
-    file = f'{AUDIO_DIR}/{file_name}', file_name
-        # files = [(i+1, f'{AUDIO_DIR}/{audio}', audio)
-        #          for i, audio in enumerate(os.listdir(AUDIO_DIR))]
-    transcribe_wrapper(file, file_name)
-
-    merge()
-    return file_name.split(".")[0] + ".txt"
-
-textf = audio_to_text('calculus_test.wav')
-generate_summary(textf, 2)
+# audio_to_text('./audio/videoplayback.wav')
