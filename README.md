@@ -9,6 +9,7 @@ Spotlyte is a multipurpose use audio, video, and text converter that can be util
 College classes require a lot of information to be digested from lectures for students to learn; Spotlyte reduces the hassle of having to listen through long lectures and creates a summarized version of it.  Spotlyte also utilizes APIs to compress mp4 and wav instance footages from Youtube and Zoom to signal key movements and events that may signal action words. Overall, Spotlyte is capable of providing efficient summarized data to students through its conversion and detection systems revolving around APIs.
 
 **How we built it**
+
 Spotlyte was created with the use of three main APIs: FlaskAPI, YoutubeDL, and ZoomAPI that allows for text, audio, and video files to be converted and downloaded by the user. Text, audio, and video files are all compressed and summarized into text files using Google AI TTS. The server is hosted on the Google Cloud, utilzing a Linux based VM instance and a Streamlit front end. 
 
 List of tools used: Python, Streamlit, FlaskAPI, YoutubeDL, Google Cloud, ZoomAPI, Google AI. 
