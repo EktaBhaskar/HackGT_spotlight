@@ -68,7 +68,7 @@ class AudioToText:
 
     def write_to_text_file(self, text, file_name):
         """ Write a text to a file. """
-        save_path = './text/'
+        save_path = ''
         name_of_file = file_name.split(".")[0]
         # print(name_of_file)
         completeName = os.path.join(save_path, name_of_file+".txt")         
@@ -127,5 +127,8 @@ def audio_to_text(filename):
     obj = AudioToText(inputFile, outputFile, language)
     text = obj.get_text()
     obj.write_to_text_file(text, file_name)
+    print(outputFile)
+    return outputFile
+
 
 # audio_to_text('./audio/videoplayback.wav')

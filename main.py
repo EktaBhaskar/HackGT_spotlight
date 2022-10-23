@@ -15,9 +15,11 @@ def home():
     print("home")
     return "home"
 
-@app.route('/upload/', methods=['POST'])
+@app.route('/upload', methods=['POST', 'GET'])
 def upload_function():
     if request.method == 'POST':
+        print(request)
+        print(request.files)
         if 'file' not in request.files:
             return "File not found"
         file = request.files['file']
@@ -28,27 +30,31 @@ def upload_function():
         if file.filename == '':
             return "Empty filename"
 
-        if file and allowed_file(file.filename):
+        if file:
             filename = secure_filename(file.filename)
-            
+            print("filename:", filename)
             setup()
             if filename.endswith('.mp4'):
-                file.save(os.path.join(app.config['VIDEO_DIR'],
+                file.save(os.path.join(".",
                       filename))
                 audio_name = video_to_audio(filename)
                 text_file = audio_to_text(audio_name)
-                summary = generate_summary(text_file, 2)
+                summary = generate_summary(text_file, 8)
             elif filename.endswith('.wav'):
-                file.save(os.path.join(app.config['AUDIO_DIR'],
+                file.save(os.path.join(".",
                       filename))
                 text_file = audio_to_text(filename)
-                summary = generate_summary(text_file, 2)
+                print("test:", text_file)
+                summary = generate_summary(text_file, 8)
             else:
-                file.save(os.path.join(app.config['TEXT_DIR'],
+                file.save(os.path.join("./text",
                       filename))
                 summary = generate_summary(filename, 2)
-            return send_from_directory(directory='pdf', filename=summary)
-    return ''
+            # return send_from_directory(directory='pdf', filename=summary)
+            print(summary)
+            return "This is the Summary: "+ summary
+    return render_template('home.html')
+
 
 
 
@@ -56,9 +62,25 @@ def upload_function():
 
 
 if __name__=="__main__":
-    # file.save(os.path.join(app.config['VIDEO_DIR'],
-    #                   filename))
-    # audio_name = video_to_audio('videoplayback.mp4')
-    # # text_file = audio_to_text(audio_name)
-    # generate_summary(text_file, 2)
-	app.run(host='0.0.0.0', port = 81)
+    # setup()
+    # filename = 'text1.mp4'
+    # file = ''
+    # if filename.endswith('.mp4'):
+    #     file.save(os.path.join(app.config['VIDEO_DIR'],
+    #         filename))
+    #     audio_name = video_to_audio(filename)
+    #     text_file = audio_to_text(audio_name)
+    #     summary = generate_summary(text_file, 2)
+    # elif filename.endswith('.wav'):
+    #     file.save(os.path.join(app.config['AUDIO_DIR'],
+    #         filename))
+    #     text_file = audio_to_text(filename)
+    #     summary = generate_summary(text_file, 2)
+    # else:
+    #     file.save(os.path.join(app.config['TEXT_DIR'],
+    #         filename))
+    #     summary = generate_summary(filename, 2)
+    # return send_from_directory(directory='pdf', filename=summary)
+
+
+	app.run(host='0.0.0.0', port = 81, debug = True)
